@@ -203,6 +203,18 @@ public class Server {
                         break;
 
                     case "delete":
+                        try {
+                            // input: delete <name>
+                            String name = commandSplit[1];
+
+                            String result = this.theater.delete(name);
+
+                            System.out.println(result);
+                            pout.println(result);
+                        } catch(Exception e) {
+                            System.out.println("Warning: unable to delete by name");
+                        }
+
                         break;
 
                     default:
@@ -280,6 +292,26 @@ public class Server {
             for (int i = 1; i <= this.totalSeats; i++) {
                 if (theaterSeats.containsKey(i) == true) {
                     if (theaterSeats.get(i).equals(name) == true) {
+                        outputMessage = String.valueOf(i);
+                        break;
+                    }
+                }
+            }
+
+            return outputMessage;
+        }
+
+        public synchronized String delete(String name) {
+
+            // Step 1 - search for name
+            String outputMessage = "No reservation found for " + name;
+
+            for (int i = 1; i <= this.totalSeats; i++) {
+                if (theaterSeats.containsKey(i) == true) {
+                    if (theaterSeats.get(i).equals(name) == true) {
+
+                        // Step 2 - delete key/val pair
+                        theaterSeats.remove(i);
                         outputMessage = String.valueOf(i);
                         break;
                     }
