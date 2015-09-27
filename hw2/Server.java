@@ -168,6 +168,7 @@ public class Server {
                         } catch(Exception e) {
                             System.out.println("Warning: unable to reserve seat");
                         }
+
                         break;
 
                     case "bookSeat":
@@ -183,9 +184,22 @@ public class Server {
                         } catch(Exception e) {
                             System.out.println("Warning: unable to book seat");
                         }
+
                         break;
 
                     case "search":
+                        try {
+                            // input: search <name>
+                            String name = commandSplit[1];
+
+                            String result = this.theater.search(name);
+
+                            System.out.println(result);
+                            pout.println(result);
+                        } catch(Exception e) {
+                            System.out.println("Warning: unable to search by name");
+                        }
+
                         break;
 
                     case "delete":
@@ -247,7 +261,7 @@ public class Server {
             // Step 2 - check if this name already has a reservation
             if (theaterSeats.containsValue(name) == true) {
                 return "Seat already booked against the name provided";
-            } 
+            }
 
             // Step 3 - check if this seat already has a reservation
             if (theaterSeats.containsKey(seatNum) == true) {
@@ -256,6 +270,23 @@ public class Server {
 
             theaterSeats.put(seatNum, name);
             return "Seat assigned to you is " + seatNum;
+        }
+
+        public synchronized String search(String name) {
+
+            // Step 1 - search for name (no other steps necessary)
+            String outputMessage = "No reservation found for " + name;
+
+            for (int i = 1; i <= this.totalSeats; i++) {
+                if (theaterSeats.containsKey(i) == true) {
+                    if (theaterSeats.get(i).equals(name) == true) {
+                        outputMessage = String.valueOf(i);
+                        break;
+                    }
+                }
+            }
+
+            return outputMessage;
         }
 
         private synchronized boolean isSoldOut() {
