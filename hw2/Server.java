@@ -247,15 +247,15 @@ public class Server {
             }
 
             // Step 2 - check if this user already has a reservation
-            if (theaterSeats.containsValue(name) == true) {
+            if (this.theaterSeats.containsValue(name) == true) {
                 return "Seat already booked against the name provided";
             }
 
             // Step 3 - ok to reserve next available
             String outputMessage = "";
             for (int i = 1; i <= this.totalSeats; i++) {
-                 if (theaterSeats.containsKey(i) == false) {
-                    theaterSeats.put(i, name);
+                 if (this.theaterSeats.containsKey(i) == false) {
+                    this.theaterSeats.put(i, name);
                     outputMessage = "Seat assigned to you is " + i;
                     break;
                  }
@@ -271,16 +271,16 @@ public class Server {
             }
 
             // Step 2 - check if this name already has a reservation
-            if (theaterSeats.containsValue(name) == true) {
+            if (this.theaterSeats.containsValue(name) == true) {
                 return "Seat already booked against the name provided";
             }
 
             // Step 3 - check if this seat already has a reservation
-            if (theaterSeats.containsKey(seatNum) == true) {
+            if (this.theaterSeats.containsKey(seatNum) == true) {
                 return seatNum + " is not available";
             }
 
-            theaterSeats.put(seatNum, name);
+            this.theaterSeats.put(seatNum, name);
             return "Seat assigned to you is " + seatNum;
         }
 
@@ -290,8 +290,8 @@ public class Server {
             String outputMessage = "No reservation found for " + name;
 
             for (int i = 1; i <= this.totalSeats; i++) {
-                if (theaterSeats.containsKey(i) == true) {
-                    if (theaterSeats.get(i).equals(name) == true) {
+                if (this.theaterSeats.containsKey(i) == true) {
+                    if (this.theaterSeats.get(i).equals(name) == true) {
                         outputMessage = String.valueOf(i);
                         break;
                     }
@@ -307,11 +307,11 @@ public class Server {
             String outputMessage = "No reservation found for " + name;
 
             for (int i = 1; i <= this.totalSeats; i++) {
-                if (theaterSeats.containsKey(i) == true) {
-                    if (theaterSeats.get(i).equals(name) == true) {
+                if (this.theaterSeats.containsKey(i) == true) {
+                    if (this.theaterSeats.get(i).equals(name) == true) {
 
                         // Step 2 - delete key/val pair
-                        theaterSeats.remove(i);
+                        this.theaterSeats.remove(i);
                         outputMessage = String.valueOf(i);
                         break;
                     }
