@@ -18,6 +18,8 @@ public class tcpClient {
 		
 		try {
 			clientSocket = new Socket(hostname, port);
+            // HW 2 requirement: sockets must timeout within 100ms
+            clientSocket.setSoTimeout(100);
 			out = new PrintWriter(clientSocket.getOutputStream(), true);
 		    in = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
 		} catch (IOException e) {
