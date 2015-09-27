@@ -4,6 +4,7 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.SocketException;
 import java.io.*;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class Server {
@@ -11,12 +12,21 @@ public class Server {
     public static class ConnectionInfo {
         private String ip = "";
         private int port = 0;
+        private boolean isAlive = true;
 
         public ConnectionInfo() {}
 
         public ConnectionInfo(String ip, int port) {
             this.ip = ip;
             this.port = port;
+        }
+
+        public void setIsAlive(boolean isAlive) {
+            this.isAlive = isAlive;
+        }
+
+        public boolean getIsAlive() {
+            return this.isAlive;
         }
 
         public void setIp(String ip) {
@@ -40,6 +50,48 @@ public class Server {
         }
     }
 
+/*
+    public static class LogicalTimestamp {
+
+        private ConnectionInfo connectionInfo;
+        private int timestamp;
+
+        public LogicalTimestamp(ConnectionInfo connectionInfo, int timestamp) {
+            this.connectionInfo = connectionInfo;
+            this.timestamp = timestamp;
+        }
+
+
+        public ConnectionInfo getConnectionInfo() {
+            return this.connectionInfo;
+        }
+
+        public int getTimestamp() {
+            return this.timestamp;
+        }
+
+        public int compareTo(LogicalTimestamp logicalTimestamp) {
+            if (this.timestamp < logicalTimestamp.getTimestamp()) {
+                return -1;
+            }
+            else if (this.timestamp == logicalTimestamp.getTimestamp()) {
+
+                if (this.connectionInfo.getPort() < logicalTimestamp.getConnectionInfo().getPort()) {
+
+                    return -1;
+                }
+                else {
+
+                    return 1;
+                }
+            }
+            else {
+                return 1;
+            }
+        }
+    }
+*/
+
     public static void main (String[] args) {
 
         Scanner sc = new Scanner(System.in);
@@ -51,11 +103,14 @@ public class Server {
 
         ConnectionInfo myInfo = new ConnectionInfo();
 
+        ArrayList<ConnectionInfo> servers = new ArrayList<ConnectionInfo>();
+        List<Integer> logicalClocks = Collections.synchronizedList(new ArrayList<Integer>());
+
+        SortedMap<Integer, Integer> criticalSectionQueue = Collections.synchronizedSortedMap(new TreeMap<Integer, Integer>());
+
         System.out.println("myId is: " + myID);
         System.out.println("numServerm is: " + numServer);
         System.out.println("numSeat is: " + numSeat);
-
-        ArrayList<ConnectionInfo> servers = new ArrayList<ConnectionInfo>();
 
         sc.nextLine(); // Consume newline for scanner. Java, why do you make things so awkward?
 
@@ -72,6 +127,7 @@ public class Server {
 
                 System.out.println("new input received");
                 servers.add(otherServer);
+                logicalClocks.add(0);
             }
             catch(Exception e) {
                 System.out.println("Warning: unable to parse server input");
@@ -93,10 +149,51 @@ public class Server {
             System.out.println("other is: " + servers.get(i));
         }
 
+        ServerHandler serverHandler = new ServerHandler(
+            servers,
+            myID,
+            myInfo,
+            criticalSectionQueue,
+            logicalClocks
+        );
+
+        // Synchronize w/ other servers if available
+        for (int i = 0; i < servers.size(); i++) {
+
+            if (i != myID-1) {
+            
+                try {
+                    ConnectionInfo senderConnectionInfo = servers.get(i);
+
+                    TcpClient tcpClient = new TcpClient(senderConnectionInfo);
+                    String unparsedResponse = tcpClient.sendTCP("synchronizeNewServer");
+                    tcpClient.close();
+
+                    String[] responseSplit = new String[numServer * 2];
+                    responseSplit = unparsedResponse.split(" ");
+
+                    for (int j = 0; j < responseSplit.length; j += 2) {
+                        logicalClocks.set(
+                            Integer.parseInt(responseSplit[j]),
+                            Integer.parseInt(responseSplit[j+1])
+                        );
+                    }
+
+                    System.out.println("self sync successful!");
+
+                    break;
+                } catch(Exception e) {
+                    System.out.println("synchronizeNewServer fail: no other servers available");
+                }
+            }
+        }
+
+        System.out.println("sync check: " + logicalClocks);
+
         while(true) {
             System.out.println("loop iterate!");
-            // TODO: communicate w/ other servers
-            // keyword: synchronize?
+
+
 
             ServerSocket serverSocket = null;
 
@@ -110,7 +207,7 @@ public class Server {
 
             try {
                 Socket clientSocket = serverSocket.accept();
-                Thread clientHandlerThread = new Thread(new ClientHandler(clientSocket, theater));
+                Thread clientHandlerThread = new Thread(new ClientHandler(clientSocket, theater, serverHandler));
 
                 //start a tcp thread to handle incoming connection
                 clientHandlerThread.start();
@@ -126,13 +223,16 @@ public class Server {
     public static class ClientHandler extends Thread {
         Socket clientSocket;
         Theater theater;
+        ServerHandler serverHandler;
 
-        public ClientHandler(Socket clientSocket, Theater theater) {
+        public ClientHandler(Socket clientSocket, Theater theater, ServerHandler serverHandler) {
             this.clientSocket = clientSocket;
             this.theater = theater;
+            this.serverHandler = serverHandler;
         }
 
         public void run() {
+
             Scanner clientInput;
             try {
                 clientInput = new Scanner(clientSocket.getInputStream());
@@ -217,6 +317,58 @@ public class Server {
 
                         break;
 
+                    case "requestCriticalSection":
+                        try {
+                            //this.serverHandler.incrementAndGetLocalLogicalClock();
+                            // TODO: only tick when you send, not receive
+
+                            // input: requestCriticalSection remoteServerNumber remoteServerTimestamp
+                            int remoteServerNumber = Integer.parseInt(commandSplit[1]);
+                            int remoteServerTimestamp = Integer.parseInt(commandSplit[2]);
+
+                            String responseMessage = serverHandler.processAcknowledgeRequestCriticalSectionMessage(remoteServerNumber, remoteServerTimestamp);
+
+                            System.out.println(responseMessage);
+                            pout.println(responseMessage);
+                        } catch(Exception e) {
+                            System.out.println(e);
+                        }
+
+                        break;
+
+                    case "synchronizeNewServer":
+                        try {
+
+                            // input: synchronizeNewServer
+
+                            String responseMessage = serverHandler.processSynchronizeNewServerMessage();
+
+                            System.out.println("synced remote server");
+                            pout.println(responseMessage);
+                        } catch(Exception e) {
+                            System.out.println(e);
+                        }
+
+                        break;
+
+/*
+                    case "releaseCriticalSection":
+                        try {
+                            // input: releaseCriticalSection serverNumber timestamp
+                            int serverNumber = Integer.parseInt(commandSplit[1]);
+                            int timestamp = Integer.parseInt(commandSplit[2]);
+
+                            // TODO: add action
+                            String result = unparsedCommand;
+
+                            System.out.println(result);
+                            pout.println(result);
+                        } catch(Exception e) {
+                            System.out.println("Warning: unable to delete by name");
+                        }
+
+                        break;
+*/
                     default:
                         break;
                 }
@@ -227,6 +379,201 @@ public class Server {
             catch (IOException e) {
                 // Auto-generated catch block
                 e.printStackTrace();
+            }
+        }
+    }
+
+    public static class ServerHandler {
+
+        int myID = 0;
+        ConnectionInfo myConnectionInfo;
+        ArrayList<ConnectionInfo> servers = new ArrayList<ConnectionInfo>();
+        SortedMap<Integer, Integer> criticalSectionQueue;
+        List<Integer> logicalClocks;
+
+        public ServerHandler(ArrayList<ConnectionInfo> servers, int myID, ConnectionInfo myConnectionInfo, SortedMap<Integer, Integer> criticalSectionQueue, List<Integer> logicalClocks) {
+            this.servers = servers;
+            this.myID = myID;
+            this.myConnectionInfo = myConnectionInfo;
+            this.criticalSectionQueue = criticalSectionQueue;
+            this.logicalClocks = logicalClocks;
+        }
+
+        public synchronized int incrementAndGetLocalLogicalClock() {
+            int localLogicalClock = this.logicalClocks.get(this.myID - 1);
+
+            localLogicalClock++;
+
+            this.logicalClocks.set(this.myID - 1, localLogicalClock);
+
+            return localLogicalClock;
+        }
+
+        public synchronized int getLocalLogicalClock() {
+            int localLogicalClock = this.logicalClocks.get(this.myID - 1);
+
+            return localLogicalClock;
+        }
+
+        public synchronized String processAcknowledgeRequestCriticalSectionMessage(int remoteServerNumber, int remoteServerTimestamp) {
+
+            this.logicalClocks.set(remoteServerNumber-1, remoteServerTimestamp);
+
+            this.criticalSectionQueue.put(remoteServerTimestamp, remoteServerNumber);
+
+            String response = "acknowledgeRequestCriticalSection"
+                            + " "
+                            + this.myID
+                            + " "
+                            + this.getLocalLogicalClock()
+                            ;
+
+            return response;
+
+            /*
+            try {
+
+                ConnectionInfo senderConnectionInfo = this.servers.get(serverNumber);
+
+                TcpClient tcpClient = new TcpClient(senderConnectionInfo);
+                tcpClient.sendTCP(
+                    "acknowledgeRequestCriticalSection"
+                    + " " + this.myID
+                    + " " + this.localLogicalClock.get()
+                );
+            } catch(Exception e) {
+                System.out.println("acknowledgeRequestCriticalSection: server " + serverNumber + " is dead, setting status");
+
+                ConnectionInfo serverConnectionInfo = this.servers.get(serverNumber);
+                serverConnectionInfo.setIsAlive(false);
+                this.servers.set(serverNumber, serverConnectionInfo);
+            }
+            */
+
+        }
+
+        public synchronized String processSynchronizeNewServerMessage() {
+            String outputMessage = "";
+
+            for (int i = 0; i < this.logicalClocks.size(); i++) {
+
+                if (i > 0) {
+                    outputMessage += " ";
+                }
+
+                outputMessage += i
+                              + " "
+                              + this.logicalClocks.get(i)
+                              ;
+            }
+
+            return outputMessage;
+        };
+/*
+        public synchronized void sendRequestCriticalSection(logicalTimestamp) {
+
+            int logicalTimestamp = localLogicalClock.incrementAndGet();
+
+            int serverCounter = 0;
+            for (int i = 0; i < this.servers.size(); i++) {
+                try {
+                    if (i != this.myID - 1) {
+                        serverCounter = i;
+                        ConnectionInfo serverInfo = this.servers.get(i);
+
+                        TcpClient tcpClient = new TcpClient(serverInfo);
+                        tcpClient.sendTCP(
+                            "requestCriticalSection"
+                            + " " + this.myConnectionInfo.getIp()
+                            + " " + this.myConnectionInfo.getPort()
+                            + " " + logicalTimestamp
+                        );
+
+                    }
+                } catch(Exception e) {
+                    System.out.println("requestCriticalSection: server " + serverCounter + " is dead, setting status");
+                    ConnectionInfo serverConnectionInfo = this.servers.get(serverCounter);
+                    serverConnectionInfo.setIsAlive(false);
+                    this.servers.set(serverCounter, serverConnectionInfo);
+                }
+            }
+
+            this.criticalSectionQueue.put(logicalTimestamp, this.myConnectionInfo);
+        }
+
+        public synchronized void acknowledgeCriticalSectionRequest() {
+
+            int serverCounter = 0;
+            for (int i = 0; i < this.servers.size(); i++) {
+                try {
+                    if (i != this.myID - 1) {
+                        serverCounter = i;
+                        ConnectionInfo serverInfo = this.servers.get(i);
+
+                        TcpClient tcpClient = new TcpClient(serverInfo);
+                        tcpClient.sendTCP(
+                            "acknowledgeCriticalSectionRequest"
+                            + " " + this.myConnectionInfo.getIp()
+                            + " " + this.myConnectionInfo.getPort()
+                            + " " + logicalTimestamp
+                        );
+
+                    }
+                } catch(Exception e) {
+                    System.out.println("requestCriticalSection: server " + serverCounter + " is dead, setting status");
+                    ConnectionInfo serverConnectionInfo = this.servers.get(serverCounter);
+                    serverConnectionInfo.setIsAlive(false);
+                    this.servers.set(serverCounter, serverConnectionInfo);
+                }
+            }
+
+        }
+*/
+
+    }
+
+    public static class TcpClient {
+
+        Socket clientSocket;
+        PrintWriter out;
+        BufferedReader in;
+
+        public TcpClient(ConnectionInfo connectionInfo) {
+
+            try {
+                this.clientSocket = new Socket(connectionInfo.getIp(), connectionInfo.getPort());
+                this.out = new PrintWriter(this.clientSocket.getOutputStream(), true);
+                this.in = new BufferedReader(new InputStreamReader(this.clientSocket.getInputStream()));
+
+            }
+            catch (Exception e) {
+                //System.err.println(e);
+                //System.out.println("Server " + serverCounter + " unavailable, trying next server...");
+            }
+        }
+
+        public String sendTCP(String Message) {
+            try {
+                this.out.println(Message);
+                return this.in.readLine();
+            }
+            catch (Exception e) {
+                // TODO Auto-generated catch block
+                e.printStackTrace();
+            }
+
+            return "error";
+        }
+
+        public void close() {
+            try {
+                this.out.close();
+                this.in.close();
+                this.clientSocket.close();
+            }
+            catch (Exception e) {
+                // TODO Auto-generated catch block
+                System.err.println(e);
             }
         }
     }
