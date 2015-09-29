@@ -64,9 +64,9 @@ public class Server {
         ArrayList<ConnectionInfo> servers = new ArrayList<ConnectionInfo>();
         List<Float> logicalClocks = Collections.synchronizedList(new ArrayList<Float>());
 
-        System.out.println("myId is: " + myID);
-        System.out.println("numServerm is: " + numServer);
-        System.out.println("numSeat is: " + numSeat);
+        //System.out.println("myId is: " + myID);
+        //System.out.println("numServerm is: " + numServer);
+        //System.out.println("numSeat is: " + numSeat);
 
         sc.nextLine(); // Consume newline for scanner. Java, why do you make things so awkward?
 
@@ -81,27 +81,27 @@ public class Server {
 
                 ConnectionInfo otherServer = new ConnectionInfo(ip, port);
 
-                System.out.println("new input received");
+                //System.out.println("new input received");
                 servers.add(otherServer);
                 logicalClocks.add(Float.POSITIVE_INFINITY);
             }
             catch(Exception e) {
-                System.out.println("Warning: unable to parse server input");
+                //System.out.println("Warning: unable to parse server input");
             }
         }
 
         // Get this server's IP/port
         try {
             myInfo = servers.get(myID - 1);
-            System.out.println("myinfo is: " + myInfo);
+            //System.out.println("myinfo is: " + myInfo);
         }
         catch(Exception e) {
-            System.out.println("Warning: this server's id is out of bounds.");
+            //System.out.println("Warning: this server's id is out of bounds.");
         }
 
         // tmp debug - all server list
         for (int i = 0; i < servers.size(); i++) {
-            System.out.println("other is: " + servers.get(i));
+            //System.out.println("other is: " + servers.get(i));
         }
 
         ServerHandler serverHandler = new ServerHandler(
@@ -127,27 +127,29 @@ public class Server {
                     String[] responseSplit = new String[numServer * 2];
                     responseSplit = unparsedResponse.split(" ");
 
-                    for (int j = 0; j < responseSplit.length; j += 2) {
+                    if (responseSplit.length > 1) {
+                        for (int j = 0; j < responseSplit.length; j += 2) {
 
-                        int otherServerNumber = Integer.parseInt(responseSplit[j]);
-                        float otherServerTimestamp = Float.POSITIVE_INFINITY;
+                            int otherServerNumber = Integer.parseInt(responseSplit[j]);
+                            float otherServerTimestamp = Float.POSITIVE_INFINITY;
 
-                        String otherServerTimestampString = responseSplit[j+1];
-                        if (otherServerTimestampString.equals("Infinity") == false) {
-                            otherServerTimestamp = Float.parseFloat(otherServerTimestampString);
+                            String otherServerTimestampString = responseSplit[j+1];
+                            if (otherServerTimestampString.equals("Infinity") == false) {
+                                otherServerTimestamp = Float.parseFloat(otherServerTimestampString);
+                            }
+
+                            logicalClocks.set(
+                                otherServerNumber,
+                                otherServerTimestamp
+                            );
                         }
-
-                        logicalClocks.set(
-                            otherServerNumber,
-                            otherServerTimestamp
-                        );
                     }
 
-                    System.out.println("self clock sync successful! clocks are: " + serverHandler.logicalClocks);
+                    //System.out.println("self clock sync successful! clocks are: " + serverHandler.logicalClocks);
 
                     break;
                 } catch(Exception e) {
-                    System.out.println("synchronizeNewServerClocks fail: server " + (i + 1) + " unavailable");
+                    //System.out.println("synchronizeNewServerClocks fail: server " + (i + 1) + " unavailable");
                 }
             }
         }
@@ -174,19 +176,19 @@ public class Server {
                         }
                     }
 
-                    System.out.println("self critical section sync successful! critical section data is: " + theater.theaterSeats);
+                    //System.out.println("self critical section sync successful! critical section data is: " + theater.theaterSeats);
 
                     break;
                 } catch(Exception e) {
-                    System.out.println("synchronizeNewServerCriticalSection fail: server " + (i + 1) + " unavailable");
+                    //System.out.println("synchronizeNewServerCriticalSection fail: server " + (i + 1) + " unavailable");
                 }
             }
         }
 
-        System.out.println("sync check: " + logicalClocks);
+        //System.out.println("sync check: " + logicalClocks);
 
         while(true) {
-            System.out.println("loop iterate!");
+            //System.out.println("loop iterate!");
 
             ServerSocket serverSocket = null;
 
@@ -240,13 +242,10 @@ public class Server {
                     commandKeyword = commandSplit[0];
                 }
                 catch(Exception commandParseException) {
-                    System.out.println("Warning: unable to parse client input command");
+                    //System.out.println("Warning: unable to parse client input command");
                 }
 
-                //Scanner st = new Scanner(command);
-                //String tag = st.next();
-
-                System.out.println("clientInput 1 is: " + commandKeyword);
+                //System.out.println("clientInput 1 is: " + commandKeyword);
 
                 switch(commandKeyword) {
                     case "reserve":
@@ -254,7 +253,7 @@ public class Server {
                             this.serverHandler.sendRequestCriticalSection();
 
                             while(this.serverHandler.canEnterCriticalSection() == false) {
-                                System.out.println("crit section check is: " + this.serverHandler.logicalClocks);
+                                //System.out.println("crit section check is: " + this.serverHandler.logicalClocks);
                             }
 
                             // input: reserve <name>
@@ -264,10 +263,10 @@ public class Server {
 
                             this.serverHandler.sendReleaseCriticalSection();
 
-                            System.out.println(result);
+                            //System.out.println(result);
                             pout.println(result);
                         } catch(Exception e) {
-                            System.out.println("Warning: unable to reserve seat");
+                            //System.out.println("Warning: unable to reserve seat");
                         }
 
                         break;
@@ -277,7 +276,7 @@ public class Server {
                             this.serverHandler.sendRequestCriticalSection();
 
                             while(this.serverHandler.canEnterCriticalSection() == false) {
-                                System.out.println("crit section check is: " + this.serverHandler.logicalClocks);
+                                //System.out.println("crit section check is: " + this.serverHandler.logicalClocks);
 
                             }
 
@@ -289,10 +288,10 @@ public class Server {
 
                             this.serverHandler.sendReleaseCriticalSection();
 
-                            System.out.println(result);
+                            //System.out.println(result);
                             pout.println(result);
                         } catch(Exception e) {
-                            System.out.println("Warning: unable to book seat");
+                            //System.out.println("Warning: unable to book seat");
                         }
 
                         break;
@@ -302,7 +301,7 @@ public class Server {
                             this.serverHandler.sendRequestCriticalSection();
 
                             while(this.serverHandler.canEnterCriticalSection() == false) {
-                                System.out.println("crit section check is: " + this.serverHandler.logicalClocks);
+                                //System.out.println("crit section check is: " + this.serverHandler.logicalClocks);
                             }
 
                             // input: search <name>
@@ -312,10 +311,10 @@ public class Server {
 
                             this.serverHandler.sendReleaseCriticalSection();
 
-                            System.out.println(result);
+                            //System.out.println(result);
                             pout.println(result);
                         } catch(Exception e) {
-                            System.out.println("Warning: unable to search by name");
+                            //System.out.println("Warning: unable to search by name");
                         }
 
                         break;
@@ -325,7 +324,7 @@ public class Server {
                             this.serverHandler.sendRequestCriticalSection();
 
                             while(this.serverHandler.canEnterCriticalSection() == false) {
-                                System.out.println("crit section check is: " + this.serverHandler.logicalClocks);
+                                //System.out.println("crit section check is: " + this.serverHandler.logicalClocks);
                             }
 
                             // input: delete <name>
@@ -335,10 +334,10 @@ public class Server {
 
                             this.serverHandler.sendReleaseCriticalSection();
 
-                            System.out.println(result);
+                            //System.out.println(result);
                             pout.println(result);
                         } catch(Exception e) {
-                            System.out.println("Warning: unable to delete by name");
+                            //System.out.println("Warning: unable to delete by name");
                         }
 
                         break;
@@ -360,10 +359,10 @@ public class Server {
 
                             String responseMessage = serverHandler.processAcknowledgeRequestCriticalSectionMessage(remoteServerNumber, remoteServerTimestamp);
 
-                            System.out.println(responseMessage);
+                            //System.out.println(responseMessage);
                             pout.println(responseMessage);
                         } catch(Exception e) {
-                            System.out.println(e);
+                            //System.out.println(e);
                         }
 
                         break;
@@ -374,10 +373,10 @@ public class Server {
                             // input: synchronizeNewServer
                             String responseMessage = serverHandler.processSynchronizeNewServerMessage();
 
-                            System.out.println("synced remote server");
+                            //System.out.println("synced remote server");
                             pout.println(responseMessage);
                         } catch(Exception e) {
-                            System.out.println(e);
+                            //System.out.println(e);
                         }
 
                         break;
@@ -388,10 +387,10 @@ public class Server {
                             // input: synchronizeNewServerCriticalSection
                             String responseMessage = theater.serializeTheaterData();
 
-                            System.out.println("synchronizeNewServerCriticalSection message: " + responseMessage);
+                            //System.out.println("synchronizeNewServerCriticalSection message: " + responseMessage);
                             pout.println(responseMessage);
                         } catch(Exception e) {
-                            System.out.println(e);
+                            //System.out.println(e);
                         }
 
                         break;
@@ -404,29 +403,29 @@ public class Server {
                             float remoteServerTimestamp = Float.POSITIVE_INFINITY;
 
                             // TODO: put this in a method
-                            System.out.println("releaseCriticalSection msg is: " + unparsedCommand);
+                            //System.out.println("releaseCriticalSection msg is: " + unparsedCommand);
                             String otherServerTimestampString = commandSplit[2];
-                            System.out.println("otherServerTimestampString is: " + otherServerTimestampString);
+                            //System.out.println("otherServerTimestampString is: " + otherServerTimestampString);
                             if (otherServerTimestampString.equals("Infinity") == false) {
                                 remoteServerTimestamp = Float.parseFloat(otherServerTimestampString);
                             }
 
-                            System.out.println("remoteServerTimestamp check is: " + remoteServerTimestamp);
+                            //System.out.println("remoteServerTimestamp check is: " + remoteServerTimestamp);
 
                             String[] filteredData = new String[commandSplit.length-3];
                             for (int j = 0; j < filteredData.length; j++) {
-                                System.out.println("filtered chunk is: " + commandSplit[j+3]);
+                                //System.out.println("filtered chunk is: " + commandSplit[j+3]);
                                 filteredData[j] = commandSplit[j+3];
                             }
 
 
                             String responseMessage = serverHandler.processUpdateCriticalSectionMessage(serverNumber, remoteServerTimestamp, filteredData);
 
-                            System.out.println("updateCriticalSection message: " + responseMessage);
+                            //System.out.println("updateCriticalSection message: " + responseMessage);
                             pout.println("remote server crit section update ok");
                         } catch(Exception e) {
-                            System.out.println("landed in exception");
-                            System.out.println(e);
+                            //System.out.println("landed in exception");
+                            //System.out.println(e);
                         }
 
                         break;
@@ -466,11 +465,11 @@ public class Server {
             float localLogicalClock = this.logicalClocks.get(this.myID - 1);
 
             if (localLogicalClock == Float.POSITIVE_INFINITY) {
-                System.out.println("logicalClock if ok");
+                //System.out.println("logicalClock if ok");
                 localLogicalClock = 0;
             }
             else {
-                System.out.println("logicalClock else ok");
+                //System.out.println("logicalClock else ok");
                 localLogicalClock++;
             }
 
@@ -528,8 +527,8 @@ public class Server {
                 int seat = Integer.parseInt(criticalSectionData[j]);
                 String name = criticalSectionData[j+1];
 
-                System.out.println("seat is: " + seat);
-                System.out.println("name is: " + name);
+                //System.out.println("seat is: " + seat);
+                //System.out.println("name is: " + name);
 
                 this.theater.theaterSeats.put(seat, name);
             }
@@ -558,7 +557,7 @@ public class Server {
 
                     }
                 } catch(Exception e) {
-                    System.out.println("requestCriticalSection: server " + serverCounter + " is dead, setting status");
+                    //System.out.println("requestCriticalSection: server " + serverCounter + " is dead, setting status");
                     this.logicalClocks.set(serverCounter, Float.POSITIVE_INFINITY);
                     /*
                     ConnectionInfo serverConnectionInfo = this.servers.get(serverCounter);
@@ -566,9 +565,7 @@ public class Server {
                     this.servers.set(serverCounter, serverConnectionInfo);
                     */
                 }
-
             }
-            System.out.println("scen 3");
         }
 
         public synchronized void sendReleaseCriticalSection() {
@@ -593,7 +590,7 @@ public class Server {
 
                     }
                 } catch(Exception e) {
-                    System.out.println("sendReleaseCriticalSection: server " + serverCounter + " is dead, setting status");
+                    //System.out.println("sendReleaseCriticalSection: server " + serverCounter + " is dead, setting status");
                     this.logicalClocks.set(serverCounter, Float.POSITIVE_INFINITY);
                     /*
                     ConnectionInfo serverConnectionInfo = this.servers.get(serverCounter);
@@ -623,7 +620,7 @@ public class Server {
                 }
             }
 
-            System.out.println("canEnterCriticalSection is: " + canEnter + " and timestamps are: " + this.logicalClocks);
+            //System.out.println("canEnterCriticalSection is: " + canEnter + " and timestamps are: " + this.logicalClocks);
 
             // TODO: temp debug, REMOVE THIS
             //return false;
@@ -658,7 +655,7 @@ public class Server {
                 return this.in.readLine();
             }
             catch (Exception e) {
-                System.out.println("Unable to send TCP to remote server: " + this.clientSocket.getInetAddress());
+                //System.out.println("Unable to send TCP to remote server: " + this.clientSocket.getInetAddress());
             }
 
             return "";
@@ -672,7 +669,7 @@ public class Server {
             }
             catch (Exception e) {
                 // TODO Auto-generated catch block
-                System.err.println(e);
+                //System.err.println(e);
             }
         }
     }
@@ -725,6 +722,12 @@ public class Server {
             if (this.theaterSeats.containsKey(seatNum) == true) {
                 return seatNum + " is not available";
             }
+
+            // Step 4 - check if this seat already has a reservation
+            if (seatNum > this.totalSeats) {
+                return seatNum + " is not available";
+            }
+
 
             this.theaterSeats.put(seatNum, name);
             return "Seat assigned to you is " + seatNum;
@@ -794,7 +797,7 @@ public class Server {
                 }
             }
 
-            System.out.println("serialized theater data is: " + output);
+            //System.out.println("serialized theater data is: " + output);
             return output;
         }
     }

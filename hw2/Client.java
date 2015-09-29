@@ -59,11 +59,11 @@ public class Client {
 
                 ConnectionInfo otherServer = new ConnectionInfo(ip, port);
 
-                System.out.println("new input received");
+                //System.out.println("new input received");
                 servers.add(otherServer);
             }
             catch(Exception e) {
-                System.out.println("Warning: unable to parse server input");
+                //System.out.println("Warning: unable to parse server input");
             }
         }
 
@@ -127,7 +127,7 @@ public class Client {
                 }
                 catch (Exception e) {
                     //System.err.println(e);
-                    System.out.println("Server " + serverCounter + " unavailable, trying next server...");
+                    //System.out.println("Server " + serverCounter + " unavailable, trying next server...");
                 }
             }
         }
