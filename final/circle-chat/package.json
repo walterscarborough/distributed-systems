@@ -1,0 +1,9 @@
+{
+    "name": "circle-chat",
+    "description": "A token based circular chat program",
+    "dependencies": {
+        "colors": "1.1.2",
+        "uuid": "2.0.1"
+    },
+    "engine": "node >= 4.2.2"
+}
